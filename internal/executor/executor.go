@@ -3,6 +3,7 @@ package executor
 import (
 	"bytes"
 	"os/exec"
+	"runtime"
 	"strings"
 	"text/template"
 )
@@ -32,16 +33,17 @@ func PrepareCommand(tmplStr string, data interface{}) (string, error) {
 
 // Execute runs a shell command and returns the result
 func Execute(command string) *Result {
-	// Simple shell execution (using sh -c or cmd /c based on OS)
-	// For now, let's assume a shell is available.
-	// We'll use "powershell.exe -Command" for Windows since we are on win32.
-	
-	cmd := exec.Command("powershell.exe", "-Command", command)
-	
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("powershell.exe", "-Command", command)
+	} else {
+		cmd = exec.Command("sh", "-c", command)
+	}
+
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	
+
 	err := cmd.Run()
 	
 	exitCode := 0

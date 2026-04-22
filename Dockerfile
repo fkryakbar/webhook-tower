@@ -18,8 +18,8 @@ FROM alpine:latest
 
 WORKDIR /app
 
-# Install basic shell tools if needed (e.g., curl, git)
-RUN apk add --no-cache ca-certificates
+# Install basic shell tools if needed (e.g., curl, git, bash)
+RUN apk add --no-cache ca-certificates bash
 
 # Copy the binary from builder
 COPY --from=builder /app/webhook-tower .

@@ -1,17 +1,24 @@
 package executor
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 )
 
 func TestExecute_Success(t *testing.T) {
-	result := Execute("Write-Output 'hello'")
-	
+	var cmd string
+	if runtime.GOOS == "windows" {
+		cmd = "Write-Output 'hello'"
+	} else {
+		cmd = "echo 'hello'"
+	}
+	result := Execute(cmd)
+
 	if result.ExitCode != 0 {
 		t.Errorf("expected exit code 0, got %d", result.ExitCode)
 	}
-	
+
 	if !strings.Contains(result.Stdout, "hello") {
 		t.Errorf("expected stdout to contain 'hello', got '%s'", result.Stdout)
 	}
@@ -19,16 +26,22 @@ func TestExecute_Success(t *testing.T) {
 
 func TestExecute_Failure(t *testing.T) {
 	result := Execute("exit 1")
-	
+
 	if result.ExitCode != 1 {
 		t.Errorf("expected exit code 1, got %d", result.ExitCode)
 	}
 }
 
 func TestExecute_Stderr(t *testing.T) {
-	// In PowerShell, writing to error stream
-	result := Execute("Write-Error 'oops'")
-	
+	var cmd string
+	if runtime.GOOS == "windows" {
+		// In PowerShell, writing to error stream
+		cmd = "Write-Error 'oops'"
+	} else {
+		cmd = "echo 'oops' >&2"
+	}
+	result := Execute(cmd)
+
 	if !strings.Contains(result.Stderr, "oops") {
 		t.Errorf("expected stderr to contain 'oops', got '%s'", result.Stderr)
 	}
