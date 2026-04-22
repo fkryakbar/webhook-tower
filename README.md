@@ -7,7 +7,7 @@ Webhook Tower is a lightweight, headless webhook gateway and automation engine w
 - **🚀 Performance:** Built with Go and Gin-gonic for a minimal resource footprint.
 - **🛠 Flexible Routing:** Define multiple routes and handlers in a single YAML configuration.
 - **🎯 Precise Matching:** Filter webhooks by Path, HTTP Method, Headers, and JSON Payload values.
-- **🔐 Secure:** Built-in API Key authentication (via Headers or Query Parameters).
+- **🔐 Secure:** Built-in API Key authentication (via Headers or Query Parameters) and GitHub Webhook signature verification (`X-Hub-Signature-256`).
 - **📝 Variable Injection:** Inject webhook payload data directly into your commands using Go templates.
 - **⚡ Hybrid Execution:** Run commands synchronously (wait for output) or asynchronously (fire-and-forget).
 - **🐳 Docker Ready:** Optimized multi-stage Docker build.
@@ -50,6 +50,7 @@ routes:
   - path: "/deploy"           # The API endpoint path
     method: "POST"            # HTTP method (POST, GET, etc.)
     api_key: "secret-123"     # Optional: X-API-Key header or api_key query param
+    github_webhook_secret: "my-secret" # Optional: Automatically verifies GitHub's X-Hub-Signature-256 header using this secret
     headers:                  # Optional: Required headers for matching
       - key: "Content-Type"
         value: "application/json"
