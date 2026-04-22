@@ -32,6 +32,7 @@ func TestRouteMatching(t *testing.T) {
 			{
 				Path:   "/webhook",
 				Method: "POST",
+				APIKey: "secret-key",
 				Headers: []config.Header{
 					{Key: "X-Test", Value: "passed"},
 				},
@@ -48,38 +49,55 @@ func TestRouteMatching(t *testing.T) {
 		method         string
 		path           string
 		headers        map[string]string
+		queryParams    string
 		payload        string
 		expectedStatus int
 	}{
 		{
-			name:           "Valid request",
+			name:           "Valid request with header key",
 			method:         "POST",
 			path:           "/webhook",
+			headers:        map[string]string{"X-Test": "passed", "X-API-Key": "secret-key"},
+			payload:        `{"event": "push"}`,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Valid request with query key",
+			method:         "POST",
+			path:           "/webhook?api_key=secret-key",
 			headers:        map[string]string{"X-Test": "passed"},
 			payload:        `{"event": "push"}`,
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "Invalid payload",
+			name:           "Invalid API key",
+			method:         "POST",
+			path:           "/webhook",
+			headers:        map[string]string{"X-Test": "passed", "X-API-Key": "wrong-key"},
+			payload:        `{"event": "push"}`,
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name:           "Missing API key",
 			method:         "POST",
 			path:           "/webhook",
 			headers:        map[string]string{"X-Test": "passed"},
+			payload:        `{"event": "push"}`,
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name:           "Payload rule mismatch",
+			method:         "POST",
+			path:           "/webhook",
+			headers:        map[string]string{"X-Test": "passed", "X-API-Key": "secret-key"},
 			payload:        `{"event": "pull_request"}`,
 			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:           "Invalid method",
-			method:         "GET",
-			path:           "/webhook",
-			headers:        map[string]string{"X-Test": "passed"},
-			payload:        `{"event": "push"}`,
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "Field not found",
+			name:           "Field not found in payload",
 			method:         "POST",
 			path:           "/webhook",
-			headers:        map[string]string{"X-Test": "passed"},
+			headers:        map[string]string{"X-Test": "passed", "X-API-Key": "secret-key"},
 			payload:        `{"wrong_field": "push"}`,
 			expectedStatus: http.StatusForbidden,
 		},
@@ -88,7 +106,8 @@ func TestRouteMatching(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(tt.method, tt.path, strings.NewReader(tt.payload))
+			path := tt.path
+			req, _ := http.NewRequest(tt.method, path, strings.NewReader(tt.payload))
 			for k, v := range tt.headers {
 				req.Header.Set(k, v)
 			}

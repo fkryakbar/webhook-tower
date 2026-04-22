@@ -31,7 +31,20 @@ func NewRouter(cfg *config.Config) *gin.Engine {
 
 func createHandler(route config.Route) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 1. Header Matching
+		// 1. API Key auth
+		if route.APIKey != "" {
+			key := c.GetHeader("X-API-Key")
+			if key == "" {
+				key = c.Query("api_key")
+			}
+
+			if key != route.APIKey {
+				c.JSON(401, gin.H{"error": "unauthorized"})
+				return
+			}
+		}
+
+		// 2. Header Matching
 		for _, h := range route.Headers {
 			if c.GetHeader(h.Key) != h.Value {
 				c.JSON(403, gin.H{"error": "header mismatch"})
@@ -39,7 +52,7 @@ func createHandler(route config.Route) gin.HandlerFunc {
 			}
 		}
 
-		// 2. Payload matching
+		// 3. Payload matching
 		if len(route.Rules) > 0 {
 			body, err := io.ReadAll(c.Request.Body)
 			if err != nil {
@@ -66,8 +79,6 @@ func createHandler(route config.Route) gin.HandlerFunc {
 				// Support more operators if needed
 			}
 		}
-
-		// 3. TODO: API Key auth
 
 		c.JSON(200, gin.H{
 			"message": "matched",
