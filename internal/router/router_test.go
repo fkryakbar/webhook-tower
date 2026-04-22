@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"webhook-tower/internal/config"
 )
@@ -34,6 +35,9 @@ func TestRouteMatching(t *testing.T) {
 				Headers: []config.Header{
 					{Key: "X-Test", Value: "passed"},
 				},
+				Rules: []config.Rule{
+					{Field: "event", Operator: "==", Value: "push"},
+				},
 			},
 		},
 	}
@@ -44,6 +48,7 @@ func TestRouteMatching(t *testing.T) {
 		method         string
 		path           string
 		headers        map[string]string
+		payload        string
 		expectedStatus int
 	}{
 		{
@@ -51,35 +56,39 @@ func TestRouteMatching(t *testing.T) {
 			method:         "POST",
 			path:           "/webhook",
 			headers:        map[string]string{"X-Test": "passed"},
+			payload:        `{"event": "push"}`,
 			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Invalid payload",
+			method:         "POST",
+			path:           "/webhook",
+			headers:        map[string]string{"X-Test": "passed"},
+			payload:        `{"event": "pull_request"}`,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "Invalid method",
 			method:         "GET",
 			path:           "/webhook",
 			headers:        map[string]string{"X-Test": "passed"},
-			expectedStatus: http.StatusNotFound, // Gin will return 404 if no route matches
-		},
-		{
-			name:           "Invalid path",
-			method:         "POST",
-			path:           "/wrong",
-			headers:        map[string]string{"X-Test": "passed"},
+			payload:        `{"event": "push"}`,
 			expectedStatus: http.StatusNotFound,
 		},
 		{
-			name:           "Missing header",
+			name:           "Field not found",
 			method:         "POST",
 			path:           "/webhook",
-			headers:        map[string]string{},
-			expectedStatus: http.StatusForbidden, // Custom logic for mismatch
+			headers:        map[string]string{"X-Test": "passed"},
+			payload:        `{"wrong_field": "push"}`,
+			expectedStatus: http.StatusForbidden,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(tt.method, tt.path, nil)
+			req, _ := http.NewRequest(tt.method, tt.path, strings.NewReader(tt.payload))
 			for k, v := range tt.headers {
 				req.Header.Set(k, v)
 			}

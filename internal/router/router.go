@@ -1,9 +1,13 @@
 package router
 
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"webhook-tower/internal/config"
 
 	"github.com/gin-gonic/gin"
+	"github.com/tidwall/gjson"
 )
 
 // NewRouter initializes a new Gin engine with routes from the config
@@ -35,7 +39,33 @@ func createHandler(route config.Route) gin.HandlerFunc {
 			}
 		}
 
-		// 2. TODO: Payload matching
+		// 2. Payload matching
+		if len(route.Rules) > 0 {
+			body, err := io.ReadAll(c.Request.Body)
+			if err != nil {
+				c.JSON(400, gin.H{"error": "failed to read body"})
+				return
+			}
+			// Restore body for further use if needed
+			c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+
+			for _, rule := range route.Rules {
+				result := gjson.GetBytes(body, rule.Field)
+				if !result.Exists() {
+					c.JSON(403, gin.H{"error": fmt.Sprintf("field %s not found in payload", rule.Field)})
+					return
+				}
+
+				// Simple operator matching
+				if rule.Operator == "==" {
+					if result.String() != fmt.Sprintf("%v", rule.Value) {
+						c.JSON(403, gin.H{"error": "payload rule mismatch"})
+						return
+					}
+				}
+				// Support more operators if needed
+			}
+		}
 
 		// 3. TODO: API Key auth
 
