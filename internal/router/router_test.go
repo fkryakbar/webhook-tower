@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 	"webhook-tower/internal/config"
 )
 
@@ -49,7 +50,6 @@ func TestRouteMatching(t *testing.T) {
 		method         string
 		path           string
 		headers        map[string]string
-		queryParams    string
 		payload        string
 		expectedStatus int
 	}{
@@ -106,16 +106,68 @@ func TestRouteMatching(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			path := tt.path
-			req, _ := http.NewRequest(tt.method, path, strings.NewReader(tt.payload))
+			req, _ := http.NewRequest(tt.method, tt.path, strings.NewReader(tt.payload))
 			for k, v := range tt.headers {
 				req.Header.Set(k, v)
 			}
 			router.ServeHTTP(w, req)
 
 			if w.Code != tt.expectedStatus {
-				t.Errorf("expected status %d, got %d", tt.expectedStatus, w.Code)
+				t.Errorf("%s: expected status %d, got %d", tt.name, tt.expectedStatus, w.Code)
 			}
 		})
 	}
+}
+
+func TestExecutionModes(t *testing.T) {
+	cfg := &config.Config{
+		Routes: []config.Route{
+			{
+				Path:   "/sync",
+				Method: "POST",
+				Command: config.Command{
+					Execute: "Write-Output 'sync'",
+					Async:   false,
+				},
+			},
+			{
+				Path:   "/async",
+				Method: "POST",
+				Command: config.Command{
+					Execute: "Start-Sleep -Seconds 1; Write-Output 'async'",
+					Async:   true,
+				},
+			},
+		},
+	}
+	router := NewRouter(cfg)
+
+	t.Run("Synchronous", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/sync", strings.NewReader("{}"))
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", w.Code)
+		}
+		if !strings.Contains(w.Body.String(), "executed") {
+			t.Errorf("expected body to contain 'executed', got %s", w.Body.String())
+		}
+	})
+
+	t.Run("Asynchronous", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/async", strings.NewReader("{}"))
+		
+		start := time.Now()
+		router.ServeHTTP(w, req)
+		duration := time.Since(start)
+
+		if w.Code != http.StatusAccepted {
+			t.Errorf("expected status 202, got %d", w.Code)
+		}
+		if duration > 500*time.Millisecond {
+			t.Errorf("expected async response to be fast, took %v", duration)
+		}
+	})
 }
