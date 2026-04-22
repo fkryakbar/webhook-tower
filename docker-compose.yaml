@@ -6,8 +6,5 @@ services:
       - "8080:8080"
     volumes:
       - ./config.yaml:/config/config.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
-    # If you need to execute commands on the host, 
-    # you might need to mount the docker socket or use an SSH trigger.
-    # volumes:
-    #   - /var/run/docker.sock:/var/run/docker.sock
