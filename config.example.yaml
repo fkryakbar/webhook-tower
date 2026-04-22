@@ -1,0 +1,22 @@
+# Webhook Tower Example Configuration
+
+routes:
+  - path: "/deploy"
+    method: "POST"
+    api_key: "your-secret-api-key"
+    headers:
+      - key: "Content-Type"
+        value: "application/json"
+    rules:
+      - field: "ref"
+        operator: "=="
+        value: "refs/heads/main"
+    command:
+      execute: "powershell.exe -Command ./deploy.ps1 --branch {{.ref}}"
+      async: true
+
+  - path: "/health-check"
+    method: "GET"
+    command:
+      execute: "Write-Output 'System is healthy'"
+      async: false
