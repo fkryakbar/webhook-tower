@@ -1,0 +1,21 @@
+# Binaries
+webhook-tower
+webhook-tower.exe
+*.exe
+
+# Management & Source Control
+.git
+.gitignore
+conductor/
+.geminiignore
+
+# Development
+.vscode/
+.idea/
+vendor/
+
+# Tests
+*_test.go
+
+# Configs
+config.yaml

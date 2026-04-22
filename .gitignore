@@ -1,0 +1,33 @@
+# Binaries and executable files
+webhook-tower
+webhook-tower.exe
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with 'go test -c'
+*.test
+
+# Output of 'go generate'
+# (If you use it, you might want to uncomment this or specific files)
+# *_string.go
+
+# Project-specific ignores
+config.yaml
+
+# Dependency directories (remove the comment below if you want to ignore vendor)
+# vendor/
+
+# IDE/Editor specific
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating system files
+Thumbs.db
+Desktop.ini
+.DS_Store

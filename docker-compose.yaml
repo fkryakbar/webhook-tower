@@ -1,0 +1,13 @@
+services:
+  webhook-tower:
+    image: ghcr.io/fkryakbar/webhook-tower:latest
+    container_name: webhook-tower
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+    restart: unless-stopped
+    # If you need to execute commands on the host, 
+    # you might need to mount the docker socket or use an SSH trigger.
+    # volumes:
+    #   - /var/run/docker.sock:/var/run/docker.sock
