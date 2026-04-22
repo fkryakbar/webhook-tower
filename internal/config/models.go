@@ -7,12 +7,13 @@ type Config struct {
 
 // Route defines a single webhook endpoint and its associated execution logic
 type Route struct {
-	Path     string   `mapstructure:"path"`
-	Method   string   `mapstructure:"method"`
-	APIKey   string   `mapstructure:"api_key"`
-	Headers  []Header `mapstructure:"headers"`
-	Rules    []Rule   `mapstructure:"rules"`
-	Command  Command  `mapstructure:"command"`
+	Path                string   `mapstructure:"path"`
+	Method              string   `mapstructure:"method"`
+	APIKey              string   `mapstructure:"api_key"`
+	GithubWebhookSecret string   `mapstructure:"github_webhook_secret"`
+	Headers             []Header `mapstructure:"headers"`
+	Rules               []Rule   `mapstructure:"rules"`
+	Command             Command  `mapstructure:"command"`
 }
 
 // Header represents a key-value pair for HTTP header validation

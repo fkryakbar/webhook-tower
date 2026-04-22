@@ -22,7 +22,7 @@ func TestIntegration_WebhookFlow(t *testing.T) {
 					{Field: "branch", Operator: "==", Value: "main"},
 				},
 				Command: config.Command{
-					Execute: "Write-Output 'deploying {{.branch}}'",
+					Execute: "echo 'deploying {{.branch}}'",
 					Async:   false,
 				},
 			},

@@ -15,6 +15,20 @@ routes:
       execute: "powershell.exe -Command ./deploy.ps1 --branch {{.ref}}"
       async: true
 
+  - path: "/github-webhook"
+    method: "POST"
+    github_webhook_secret: "your-github-webhook-secret" # Verifies X-Hub-Signature-256 header
+    headers:
+      - key: "X-GitHub-Event"
+        value: "push"
+    rules:
+      - field: "ref"
+        operator: "=="
+        value: "refs/heads/main"
+    command:
+      execute: "powershell.exe -Command ./deploy.ps1 --branch {{.ref}}"
+      async: true
+
   - path: "/health-check"
     method: "GET"
     command:

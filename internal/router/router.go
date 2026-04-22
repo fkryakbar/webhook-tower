@@ -2,9 +2,13 @@ package router
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"webhook-tower/internal/config"
 	"webhook-tower/internal/executor"
 
@@ -63,7 +67,32 @@ func createHandler(route config.Route) gin.HandlerFunc {
 			}
 		}
 
-		// 3. Payload matching
+		// 3. GitHub Webhook Signature Verification
+		if route.GithubWebhookSecret != "" {
+			signatureHeader := c.GetHeader("X-Hub-Signature-256")
+			if signatureHeader == "" {
+				c.JSON(403, gin.H{"error": "missing github signature"})
+				return
+			}
+
+			if !strings.HasPrefix(signatureHeader, "sha256=") {
+				c.JSON(403, gin.H{"error": "invalid github signature format"})
+				return
+			}
+
+			signature := signatureHeader[7:]
+			mac := hmac.New(sha256.New, []byte(route.GithubWebhookSecret))
+			mac.Write(body)
+			expectedMAC := mac.Sum(nil)
+			expectedSignature := hex.EncodeToString(expectedMAC)
+
+			if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
+				c.JSON(403, gin.H{"error": "invalid github signature"})
+				return
+			}
+		}
+
+		// 4. Payload matching
 		if len(route.Rules) > 0 {
 			if err != nil {
 				c.JSON(400, gin.H{"error": "failed to read body"})

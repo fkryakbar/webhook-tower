@@ -119,6 +119,76 @@ func TestRouteMatching(t *testing.T) {
 	}
 }
 
+func TestGithubWebhookSignatureVerification(t *testing.T) {
+	cfg := &config.Config{
+		Routes: []config.Route{
+			{
+				Path:                "/github",
+				Method:              "POST",
+				GithubWebhookSecret: "my-super-secret",
+			},
+		},
+	}
+	router := NewRouter(cfg)
+
+	tests := []struct {
+		name           string
+		method         string
+		path           string
+		headers        map[string]string
+		payload        string
+		expectedStatus int
+	}{
+		{
+			name:           "Valid signature",
+			method:         "POST",
+			path:           "/github",
+			headers:        map[string]string{"X-Hub-Signature-256": "sha256=c408c0d877912f1368eb6e74e41e159144bff3de796ca195daca3962431b5ffa"}, // payload is `{"event": "push"}` and secret is `my-super-secret`
+			payload:        `{"event": "push"}`,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Missing signature",
+			method:         "POST",
+			path:           "/github",
+			headers:        map[string]string{},
+			payload:        `{"event": "push"}`,
+			expectedStatus: http.StatusForbidden,
+		},
+		{
+			name:           "Invalid signature format",
+			method:         "POST",
+			path:           "/github",
+			headers:        map[string]string{"X-Hub-Signature-256": "17ab5a242ad4d075ba5a8edcbf0e6508d72863fb72fc823bc0c14b62eb03cb8d"},
+			payload:        `{"event": "push"}`,
+			expectedStatus: http.StatusForbidden,
+		},
+		{
+			name:           "Invalid signature",
+			method:         "POST",
+			path:           "/github",
+			headers:        map[string]string{"X-Hub-Signature-256": "sha256=wrongsignature075ba5a8edcbf0e6508d72863fb72fc823bc0c14b62eb03cb8d"},
+			payload:        `{"event": "push"}`,
+			expectedStatus: http.StatusForbidden,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(tt.method, tt.path, strings.NewReader(tt.payload))
+			for k, v := range tt.headers {
+				req.Header.Set(k, v)
+			}
+			router.ServeHTTP(w, req)
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("%s: expected status %d, got %d", tt.name, tt.expectedStatus, w.Code)
+			}
+		})
+	}
+}
+
 func TestExecutionModes(t *testing.T) {
 	cfg := &config.Config{
 		Routes: []config.Route{
@@ -126,7 +196,7 @@ func TestExecutionModes(t *testing.T) {
 				Path:   "/sync",
 				Method: "POST",
 				Command: config.Command{
-					Execute: "Write-Output 'sync'",
+					Execute: "echo 'sync'",
 					Async:   false,
 				},
 			},
@@ -134,7 +204,7 @@ func TestExecutionModes(t *testing.T) {
 				Path:   "/async",
 				Method: "POST",
 				Command: config.Command{
-					Execute: "Start-Sleep -Seconds 1; Write-Output 'async'",
+					Execute: "sleep 1; echo 'async'",
 					Async:   true,
 				},
 			},
