@@ -33,3 +33,43 @@ func TestExecute_Stderr(t *testing.T) {
 		t.Errorf("expected stderr to contain 'oops', got '%s'", result.Stderr)
 	}
 }
+
+func TestPrepareCommand(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		data     map[string]interface{}
+		expected string
+	}{
+		{
+			name:     "Simple injection",
+			template: "echo {{.name}}",
+			data:     map[string]interface{}{"name": "world"},
+			expected: "echo world",
+		},
+		{
+			name:     "Multiple variables",
+			template: "git checkout {{.branch}} && git pull {{.remote}}",
+			data:     map[string]interface{}{"branch": "main", "remote": "origin"},
+			expected: "git checkout main && git pull origin",
+		},
+		{
+			name:     "Missing variable",
+			template: "echo {{.missing}}",
+			data:     map[string]interface{}{"name": "world"},
+			expected: "echo <no value>", // text/template default
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := PrepareCommand(tt.template, tt.data)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("expected '%s', got '%s'", tt.expected, result)
+			}
+		})
+	}
+}

@@ -1,8 +1,10 @@
 package executor
 
 import (
+	"bytes"
 	"os/exec"
 	"strings"
+	"text/template"
 )
 
 // Result represents the outcome of a command execution
@@ -11,6 +13,21 @@ type Result struct {
 	Stderr   string
 	ExitCode int
 	Error    error
+}
+
+// PrepareCommand injects data into a command template
+func PrepareCommand(tmplStr string, data interface{}) (string, error) {
+	tmpl, err := template.New("command").Parse(tmplStr)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 // Execute runs a shell command and returns the result
